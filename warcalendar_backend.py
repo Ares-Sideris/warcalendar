@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy import Column, Integer, String, DateTime, Table, ForeignKey, create_engine, and_
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base, Session
 from pydantic import BaseModel
@@ -85,6 +87,13 @@ class EventRead(EventBase):
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
+
+# Serve static frontend
+app.mount('/static', StaticFiles(directory='static'), name='static')
+
+@app.get('/', include_in_schema=False)
+def root():
+    return FileResponse('static/index.html')
 
 # --- Dependency ---
 def get_db():
