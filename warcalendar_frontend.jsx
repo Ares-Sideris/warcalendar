@@ -138,6 +138,81 @@ export default function CalendarView() {
         <Button onClick={loadEvents}>Фильтровать</Button>
       </div>
 
+      <Card>
+        <CardContent className="space-y-2">
+          <h2 className="font-semibold">Добавить событие</h2>
+          <Input
+            placeholder="API ключ"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          <Input
+            placeholder="Название"
+            value={newEvent.title}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, title: e.target.value }))
+            }
+          />
+          <Input
+            placeholder="Тип"
+            value={newEvent.type}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, type: e.target.value }))
+            }
+          />
+          <Input
+            type="date"
+            placeholder="Начало"
+            value={newEvent.start_date}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, start_date: e.target.value }))
+            }
+          />
+          <Input
+            type="date"
+            placeholder="Окончание"
+            value={newEvent.end_date}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, end_date: e.target.value }))
+            }
+          />
+          <Input
+            placeholder="Описание"
+            value={newEvent.description}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, description: e.target.value }))
+            }
+          />
+          <Input
+            placeholder="URL картинки"
+            value={newEvent.image_url}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, image_url: e.target.value }))
+            }
+          />
+          <Input
+            placeholder="Источник"
+            value={newEvent.source_url}
+            onChange={(e) =>
+              setNewEvent((prev) => ({ ...prev, source_url: e.target.value }))
+            }
+          />
+          <div className="flex flex-wrap gap-2">
+            {allTags.map((tag) => (
+              <label key={tag.id} className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={newEvent.tag_ids.includes(tag.id)}
+                  onChange={() => handleTagToggle(tag.id)}
+                />
+                {tag.name}
+              </label>
+            ))}
+          </div>
+          <Button onClick={handleCreateEvent}>Создать</Button>
+        </CardContent>
+      </Card>
+
       <div className="space-y-2">
         <h2 className="text-xl font-bold">Календарь событий</h2>
         <FullCalendar
@@ -151,6 +226,36 @@ export default function CalendarView() {
             url: event.source_url || undefined,
           }))}
         />
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold">Список событий</h2>
+        {events.map((event) => (
+          <Card key={event.id}>
+            <CardContent className="flex justify-between items-center">
+              <div>
+                <div className="font-semibold">{event.title}</div>
+                <div className="text-sm">
+                  {format(new Date(event.start_date), "dd.MM.yyyy")} -
+                  {" "}
+                  {format(new Date(event.end_date), "dd.MM.yyyy")}
+                </div>
+              </div>
+              <div className="space-x-2">
+                <Button size="sm" onClick={() => handleEdit(event.id)}>
+                  Редактировать
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handleDelete(event.id)}
+                >
+                  Удалить
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );
