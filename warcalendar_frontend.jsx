@@ -6,6 +6,9 @@ import { format } from "date-fns";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 
+// Форма создания события используется и при редактировании, поэтому храним
+// состояния отдельно
+
 export default function CalendarView() {
   const [events, setEvents] = useState([]);
   const [filterType, setFilterType] = useState("");
@@ -24,6 +27,7 @@ export default function CalendarView() {
     source_url: "",
     tag_ids: [],
   });
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const loadEvents = async () => {
     const params = new URLSearchParams();
@@ -44,6 +48,19 @@ export default function CalendarView() {
 
   const handleTagToggle = (tagId) => {
     setNewEvent((prev) => {
+      const exists = prev.tag_ids.includes(tagId);
+      return {
+        ...prev,
+        tag_ids: exists
+          ? prev.tag_ids.filter((id) => id !== tagId)
+          : [...prev.tag_ids, tagId],
+      };
+    });
+  };
+
+  const handleEditTagToggle = (tagId) => {
+    setEditingEvent((prev) => {
+      if (!prev) return prev;
       const exists = prev.tag_ids.includes(tagId);
       return {
         ...prev,
@@ -88,7 +105,38 @@ export default function CalendarView() {
   };
 
   const handleEdit = (id) => {
-    alert(`Редактировать событие ${id}`);
+    const ev = events.find((e) => e.id === id);
+    if (!ev) return;
+    setEditingEvent({
+      ...ev,
+      start_date: ev.start_date.slice(0, 16),
+      end_date: ev.end_date.slice(0, 16),
+      tag_ids: ev.tags ? ev.tags.map((t) => t.id) : [],
+    });
+  };
+
+  const handleUpdateEvent = async () => {
+    const response = await fetch(`/events/${editingEvent.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        ...editingEvent,
+        start_date: new Date(editingEvent.start_date).toISOString(),
+        end_date: new Date(editingEvent.end_date).toISOString(),
+      }),
+    });
+
+    if (response.ok) {
+      alert("Событие обновлено!");
+      setEditingEvent(null);
+      loadEvents();
+    } else {
+      const err = await response.json();
+      alert("Ошибка: " + err.detail);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -139,6 +187,97 @@ export default function CalendarView() {
       </div>
 
       <div className="space-y-2">
+        <h2 className="text-xl font-bold">Создать событие</h2>
+        <Input
+          placeholder="Название"
+          value={newEvent.title}
+          onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+        />
+        <Input
+          placeholder="Тип"
+          value={newEvent.type}
+          onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value })}
+        />
+        <Input
+          type="datetime-local"
+          placeholder="Начало"
+          value={newEvent.start_date}
+          onChange={(e) =>
+            setNewEvent({ ...newEvent, start_date: e.target.value })
+          }
+        />
+        <Input
+          type="datetime-local"
+          placeholder="Конец"
+          value={newEvent.end_date}
+          onChange={(e) =>
+            setNewEvent({ ...newEvent, end_date: e.target.value })
+          }
+        />
+        <Input
+          placeholder="Описание"
+          value={newEvent.description}
+          onChange={(e) =>
+            setNewEvent({ ...newEvent, description: e.target.value })
+          }
+        />
+        <Input
+          placeholder="Image URL"
+          value={newEvent.image_url}
+          onChange={(e) =>
+            setNewEvent({ ...newEvent, image_url: e.target.value })
+          }
+        />
+        <Input
+          placeholder="Source URL"
+          value={newEvent.source_url}
+          onChange={(e) =>
+            setNewEvent({ ...newEvent, source_url: e.target.value })
+          }
+        />
+        <div className="flex gap-2 flex-wrap">
+          {allTags.map((tag) => (
+            <label key={tag.id} className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={newEvent.tag_ids.includes(tag.id)}
+                onChange={() => handleTagToggle(tag.id)}
+              />
+              {tag.name}
+            </label>
+          ))}
+        </div>
+        <Input
+          placeholder="API Key"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+        <Button onClick={handleCreateEvent}>Создать</Button>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold">Список событий</h2>
+        {events.map((event) => (
+          <Card key={event.id}>
+            <CardContent className="flex justify-between items-center">
+              <div>
+                <div className="font-semibold">{event.title}</div>
+                <div className="text-sm">
+                  {format(new Date(event.start_date), "yyyy-MM-dd")} -
+                  {" "}
+                  {format(new Date(event.end_date), "yyyy-MM-dd")}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => handleEdit(event.id)}>Редактировать</Button>
+                <Button onClick={() => handleDelete(event.id)}>Удалить</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="space-y-2">
         <h2 className="text-xl font-bold">Календарь событий</h2>
         <FullCalendar
           plugins={[dayGridPlugin]}
@@ -152,6 +291,98 @@ export default function CalendarView() {
           }))}
         />
       </div>
+
+      {editingEvent && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+          <Card className="bg-white p-4 space-y-2 w-96">
+            <CardContent className="space-y-2">
+              <h2 className="text-xl font-bold">Редактировать событие</h2>
+              <Input
+                placeholder="Название"
+                value={editingEvent.title}
+                onChange={(e) =>
+                  setEditingEvent({ ...editingEvent, title: e.target.value })
+                }
+              />
+              <Input
+                placeholder="Тип"
+                value={editingEvent.type}
+                onChange={(e) =>
+                  setEditingEvent({ ...editingEvent, type: e.target.value })
+                }
+              />
+              <Input
+                type="datetime-local"
+                placeholder="Начало"
+                value={editingEvent.start_date}
+                onChange={(e) =>
+                  setEditingEvent({
+                    ...editingEvent,
+                    start_date: e.target.value,
+                  })
+                }
+              />
+              <Input
+                type="datetime-local"
+                placeholder="Конец"
+                value={editingEvent.end_date}
+                onChange={(e) =>
+                  setEditingEvent({
+                    ...editingEvent,
+                    end_date: e.target.value,
+                  })
+                }
+              />
+              <Input
+                placeholder="Описание"
+                value={editingEvent.description || ""}
+                onChange={(e) =>
+                  setEditingEvent({
+                    ...editingEvent,
+                    description: e.target.value,
+                  })
+                }
+              />
+              <Input
+                placeholder="Image URL"
+                value={editingEvent.image_url || ""}
+                onChange={(e) =>
+                  setEditingEvent({
+                    ...editingEvent,
+                    image_url: e.target.value,
+                  })
+                }
+              />
+              <Input
+                placeholder="Source URL"
+                value={editingEvent.source_url || ""}
+                onChange={(e) =>
+                  setEditingEvent({
+                    ...editingEvent,
+                    source_url: e.target.value,
+                  })
+                }
+              />
+              <div className="flex gap-2 flex-wrap">
+                {allTags.map((tag) => (
+                  <label key={tag.id} className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={editingEvent.tag_ids.includes(tag.id)}
+                      onChange={() => handleEditTagToggle(tag.id)}
+                    />
+                    {tag.name}
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleUpdateEvent}>Сохранить</Button>
+                <Button onClick={() => setEditingEvent(null)}>Отмена</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
