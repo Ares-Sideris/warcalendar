@@ -34,6 +34,9 @@ class Event(Base):
     image_url = Column(String)
     source_url = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+    rewards = Column(String)
+    country_tree = Column(String)
+    country_holiday = Column(String, nullable=True)
 
     tags = relationship("Tag", secondary=event_tag_association, back_populates="events")
 
@@ -64,6 +67,9 @@ class EventBase(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     source_url: Optional[str] = None
+    rewards: Optional[str] = None
+    country_tree: Optional[str] = None
+    country_holiday: Optional[str] = None
 
 class EventCreate(EventBase):
     tag_ids: list[int] = []
@@ -152,6 +158,8 @@ def list_events(
     active: Optional[bool] = None,
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
+    reward: Optional[str] = None,
+    country: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Event)
@@ -171,4 +179,45 @@ def list_events(
     if tag:
         query = query.join(Event.tags).filter(Tag.name == tag)
 
+    if reward:
+        query = query.filter(Event.rewards.ilike(f"%{reward}%"))
+
+    if country:
+        query = query.filter(
+            (Event.country_tree == country) |
+            (Event.country_holiday == country)
+        )
+
     return query.all()
+
+
+@app.get("/events/{event_id}", response_model=EventRead)
+def get_event(event_id: int, db: Session = Depends(get_db)):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event
+
+
+@app.put("/events/{event_id}", response_model=EventRead, dependencies=[Depends(verify_api_key)])
+def update_event(event_id: int, updated: EventCreate, db: Session = Depends(get_db)):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    tags = db.query(Tag).filter(Tag.id.in_(updated.tag_ids)).all()
+    for field, value in updated.dict(exclude={"tag_ids"}).items():
+        setattr(event, field, value)
+    event.tags = tags
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+@app.delete("/events/{event_id}", dependencies=[Depends(verify_api_key)])
+def delete_event(event_id: int, db: Session = Depends(get_db)):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    db.delete(event)
+    db.commit()
+    return {"detail": "Event deleted"}

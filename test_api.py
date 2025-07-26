@@ -56,6 +56,9 @@ def test_events_endpoint():
             'type': 'type1',
             'start_date': '2023-01-01T00:00:00',
             'end_date': '2023-01-02T00:00:00',
+            'rewards': 'Декаль',
+            'country_tree': 'Testland',
+            'country_holiday': 'Testland',
             'tag_ids': [tag_id],
         },
         headers={'X-API-Key': 'wrong'}
@@ -70,6 +73,9 @@ def test_events_endpoint():
             'type': 'type1',
             'start_date': '2023-01-01T00:00:00',
             'end_date': '2023-01-02T00:00:00',
+            'rewards': 'Декаль',
+            'country_tree': 'Testland',
+            'country_holiday': 'Testland',
             'tag_ids': [tag_id],
         },
         headers={'X-API-Key': backend.API_KEY}
@@ -85,6 +91,18 @@ def test_events_endpoint():
     events = response.json()
     assert len(events) == 1
     assert events[0]['title'] == 'Event 1'
+
+    # Filter by reward
+    response = client.get('/events/?reward=%D0%94%D0%B5%D0%BA%D0%B0%D0%BB%D1%8C')
+    assert response.status_code == 200
+    events = response.json()
+    assert len(events) == 1
+
+    # Filter by country
+    response = client.get('/events/?country=Testland')
+    assert response.status_code == 200
+    events = response.json()
+    assert len(events) == 1
 
 
 def test_nonexistent_object():
