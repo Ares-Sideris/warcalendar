@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Warcalendar</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 1rem; }
+        label { display: block; margin-top: .5rem; }
+        section { margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Warcalendar</h1>
+
+    <section>
+        <label>API Key: <input id="apiKey" type="text"></label>
+    </section>
+
+    <section>
+        <h2>Фильтры событий</h2>
+        <label>Тип: <input id="filterType" type="text"></label>
+        <label>Тег: <input id="filterTag" type="text"></label>
+        <label><input id="filterActive" type="checkbox"> Только активные</label>
+        <button id="applyFilters">Фильтровать</button>
+    </section>
+
+    <section>
+        <h2>Теги</h2>
+        <label>Новый тег: <input id="newTag" type="text"></label>
+        <button id="createTag">Создать</button>
+        <ul id="tagList"></ul>
+    </section>
+
+    <section>
+        <h2>Новое событие</h2>
+        <label>Название: <input id="evTitle" type="text"></label>
+        <label>Тип: <input id="evType" type="text"></label>
+        <label>Начало: <input id="evStart" type="date"></label>
+        <label>Конец: <input id="evEnd" type="date"></label>
+        <label>Описание: <input id="evDescription" type="text"></label>
+        <label>URL изображения: <input id="evImage" type="text"></label>
+        <label>Ссылка: <input id="evSource" type="text"></label>
+        <div id="tagCheckboxes"></div>
+        <button id="createEvent">Создать событие</button>
+    </section>
+
+    <section>
+        <h2>События</h2>
+        <ul id="eventList"></ul>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>
