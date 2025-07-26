@@ -105,6 +105,36 @@ def create_tag(tag: TagCreate, db: Session = Depends(get_db)):
 def list_tags(db: Session = Depends(get_db)):
     return db.query(Tag).all()
 
+@app.get("/tags/{tag_id}", response_model=TagRead)
+def get_tag(tag_id: int, db: Session = Depends(get_db)):
+    tag = db.query(Tag).filter(Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return tag
+
+@app.put(
+    "/tags/{tag_id}",
+    response_model=TagRead,
+    dependencies=[Depends(verify_api_key)],
+)
+def update_tag(tag_id: int, tag: TagCreate, db: Session = Depends(get_db)):
+    db_tag = db.query(Tag).filter(Tag.id == tag_id).first()
+    if not db_tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    db_tag.name = tag.name
+    db.commit()
+    db.refresh(db_tag)
+    return db_tag
+
+@app.delete("/tags/{tag_id}", dependencies=[Depends(verify_api_key)])
+def delete_tag(tag_id: int, db: Session = Depends(get_db)):
+    db_tag = db.query(Tag).filter(Tag.id == tag_id).first()
+    if not db_tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    db.delete(db_tag)
+    db.commit()
+    return {"detail": "Tag deleted"}
+
 @app.post("/events/", response_model=EventRead, dependencies=[Depends(verify_api_key)])
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
     tags = db.query(Tag).filter(Tag.id.in_(event.tag_ids)).all()

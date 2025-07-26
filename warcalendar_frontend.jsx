@@ -14,6 +14,9 @@ export default function CalendarView() {
 
   const [apiKey, setApiKey] = useState("");
   const [allTags, setAllTags] = useState([]);
+  const [newTagName, setNewTagName] = useState("");
+  const [editingTagId, setEditingTagId] = useState(null);
+  const [editingTagName, setEditingTagName] = useState("");
   const [newEvent, setNewEvent] = useState({
     title: "",
     type: "",
@@ -40,6 +43,65 @@ export default function CalendarView() {
     const response = await fetch("/tags/");
     const data = await response.json();
     setAllTags(data);
+  };
+
+  const handleCreateTag = async () => {
+    const response = await fetch("/tags/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({ name: newTagName }),
+    });
+    if (response.ok) {
+      setNewTagName("");
+      loadTags();
+    } else {
+      const err = await response.json();
+      alert("Ошибка: " + err.detail);
+    }
+  };
+
+  const handleEditTag = (tag) => {
+    setEditingTagId(tag.id);
+    setEditingTagName(tag.name);
+  };
+
+  const handleUpdateTag = async () => {
+    const response = await fetch(`/tags/${editingTagId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({ name: editingTagName }),
+    });
+    if (response.ok) {
+      setEditingTagId(null);
+      setEditingTagName("");
+      loadTags();
+    } else {
+      const err = await response.json();
+      alert("Ошибка: " + err.detail);
+    }
+  };
+
+  const handleDeleteTag = async (id) => {
+    const confirmed = confirm("Удалить этот тег?");
+    if (!confirmed) return;
+    const response = await fetch(`/tags/${id}`, {
+      method: "DELETE",
+      headers: {
+        "X-API-Key": apiKey,
+      },
+    });
+    if (response.ok) {
+      loadTags();
+    } else {
+      const err = await response.json();
+      alert("Ошибка: " + err.detail);
+    }
   };
 
   const handleTagToggle = (tagId) => {
@@ -116,6 +178,13 @@ export default function CalendarView() {
 
   return (
     <div className="p-4 space-y-6">
+      <div className="flex gap-2 items-center">
+        <Input
+          placeholder="API Key"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+      </div>
       <div className="flex gap-2">
         <Input
           placeholder="Тип события"
@@ -136,6 +205,47 @@ export default function CalendarView() {
           Только активные
         </label>
         <Button onClick={loadEvents}>Фильтровать</Button>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold">Теги</h2>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Новый тег"
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+          />
+          <Button onClick={handleCreateTag}>Создать</Button>
+        </div>
+        {editingTagId !== null && (
+          <div className="flex gap-2">
+            <Input
+              value={editingTagName}
+              onChange={(e) => setEditingTagName(e.target.value)}
+            />
+            <Button onClick={handleUpdateTag}>Сохранить</Button>
+            <Button variant="outline" onClick={() => setEditingTagId(null)}>
+              Отмена
+            </Button>
+          </div>
+        )}
+        <ul className="space-y-1">
+          {allTags.map((tag) => (
+            <li key={tag.id} className="flex items-center gap-2">
+              <span>{tag.name}</span>
+              <Button size="sm" variant="outline" onClick={() => handleEditTag(tag)}>
+                Редактировать
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleDeleteTag(tag.id)}
+              >
+                Удалить
+              </Button>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="space-y-2">
